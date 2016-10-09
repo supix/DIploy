@@ -1,4 +1,4 @@
-# DIploy
+# Where dependency-injection binding rules have to be put?
 
 Dependency Injection (DI) is one of the most valuable architectural patterns in software development. It encourages clean design, programming towards interfaces (as opposite to implementations), promotes unit testing, greatly improves extensibility. Benefits of adopting DI *way of life* are clearly described by [this article](http://kozmic.net/2012/10/23/ioc-container-solves-a-problem-you-might-not-have-but-its-a-nice-problem-to-have/).
 
@@ -27,7 +27,7 @@ The *most popular products list* is a domain concept. For example, the applicati
 
 The actual (though nevertheless emulated) implementation of the service is in the file `PersistenceLayer/Products/GetPopularProducts_Db.cs`. When this implementation works, returned products have names starting with "Fake...".
 
-So far, whe have the service definition (interface) and two service implementations in two different places. The next step is to create a `ProductsController` which is in charge of showing the list of products through an action. The `IGetPopularProducts` is injected into the controller and the view is coded. We skip the details, which are out of scope now. If you run the project, you get an error saying that `ProductsController` has not a default constructor. This is the moment when the DI controller comes into play.
+So far, we have the service definition (interface) and two service implementations in two different places. The next step is to create a `ProductsController` which is in charge of showing the list of products through an action. The `IGetPopularProducts` is injected into the controller and the view is coded. We skip the details, which are out of scope now. If you run the project, you get an error saying that `ProductsController` has not a default constructor. This is the moment when the DI controller comes into play.
 
 So, let's install the DI library through the following NuGet commands:
 
@@ -61,7 +61,7 @@ Let's configure the container. The `PresentationLayer/App_Start/CompositionRoot.
     DependencyResolver.SetResolver(new SimpleInjectorDependencyResolver(container));
 ```
 
-As you can see, it contains no binding rules, nor it explicitly refers to some binging routine (e.g. `SomeClass.ConfigureBindings()`). The magic is in the following two lines.
+As you can see, it contains no binding rules, nor it explicitly refers to some binding routine (e.g. `SomeClass.ConfigureBindings()`). The magic is in the following two lines.
 
 ```C#
 // Scan all the referenced assemblies for packages containing DI wiring rules
@@ -69,12 +69,13 @@ var assemblies = BuildManager.GetReferencedAssemblies().Cast<Assembly>();
 container.RegisterPackages(assemblies);
 ```
 
-This lines scan all the assemblies referenced by the PersistenceLayer project, searching for binding modules, i.e. the classes inherited by ``IPackage``. Their ``RegisterServices()`` overridden method contains the binding rules. Thanks to packages we can distribute DI logic throughout the application, with the aim of placing DI rules **as close as possible to implementations**. In our example, the file `DomainModel/Bindings.cs` refers to the fake implementation of the service. Instead, the file `PersistenceLayer/Bindings.cs` refers to the *actual* implementation. Both files are close to implementations. So the implementations can even be declared as private.
+This lines scan all the assemblies referenced by the PersistenceLayer project, searching for binding modules, i.e. the classes inherited by ``IPackage``. Their ``RegisterServices()`` overridden method contains the binding rules. Thanks to packages we can spread DI logic throughout the application, with the aim of placing DI rules **as close as possible to implementations**. In our example, the file `DomainModel/Bindings.cs` refers to the fake implementation of the service. Instead, the file `PersistenceLayer/Bindings.cs` refers to the *actual* implementation. As you can see, both bindings are in the same assembly as the implementations. 
 
 The described approach has these pro and cons.
 
 ...work in progress
 
 * Pro
+  * The implementations can be declared as private.
 
 * Cons
