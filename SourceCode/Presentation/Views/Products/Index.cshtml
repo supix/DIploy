@@ -1,0 +1,26 @@
+﻿@model Presentation.Models.Products.PagedProductsViewModel
+
+@{
+    ViewBag.Title = "Popular products";
+}
+
+<h2>Popular products</h2>
+
+<div>Total products: @Model.TotalItems</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model.Products)
+        {
+            <tr>
+                <td>@p.Description</td>
+            </tr>
+        }
+    </tbody>
+</table>
+<div><a href="#">Previous</a> ... <a href="#">Next</a></div>

@@ -7,9 +7,11 @@ Anyway, source code organization is not that trivial when using dependency injec
  * where have implementations to be put?
  * where has container configuration to be put?
 
-Let's see a possible way to organize a project while using DI, with an example in C# using [Visual Studio CE 2013](https://www.visualstudio.com/it/vs/community/) and [SimpleInjector](https://simpleinjector.org/index.html) DI library.
+I placed such a [StackOverflow question](http://stackoverflow.com/questions/36386467/where-dependency-injection-registrations-have-to-be-put) some times ago. The answers brought me to the right path. This article expands on this topic showing a concrete solution to the problem.
 
-The concepts described are highly general but, for the sake of concretness, let's imagine to have an e-commerce application that provides the user with a list of the most *popular* products.
+The presented example is written in C# using [Visual Studio CE 2013](https://www.visualstudio.com/it/vs/community/) and [SimpleInjector](https://simpleinjector.org/index.html) as DI library. The presentation layer is based on an ASP.NET-MVC5 architecture, so the composition root role is played by each of the controllers. Anyway, this concepts are general and can be applied whatever composition root you have.
+
+For the sake of being concrete, let's imagine to have an e-commerce application that provides the user with a list of *the most popular products*.
 
 The architecture can be organized as shown in the picture. There is a domain model, a persistence layer, an application database and a presentation layer. Layers have dependencies, as shown by the arrows which represent the *uses* relation.
 
@@ -19,20 +21,28 @@ The *persistence layer* contains non-trivial queries to the DB, exposed as a ser
 
 The *presentation layer* interfaces the application with the user, according to the chosen presentation technology (e.g. web interface, REST service, windows forms, ecc.). It depends on the presentation layer and consumes its services. It directly depends on the db as well: unless the application is very trivial, it is not always rewarding to rigidly shield the database through a layer exposing all the database functionalities.
 
-The source code reproduces this simple modules organizations. It it based on a ASP.NET MVC5 project, acting as the presentation layer. Domain model and persistence layers have been added to the Visual Studio solution as two class-libraries. References among projects have been added, so as described by the picture above.
+The source code reproduces this simple modules organizations. You can see the MVC5 presentation layer. Domain model and persistence layers have been added to the Visual Studio solution as two class-libraries. References among projects have been added, so as described by the picture above.
 
+The *most popular products list* is a domain concept. For example, the application might take top-sold products in the last month mixing them with the products most visited by the logged user, possibly removing the out-of-stock products. The place to put such a domain concept cannot be other than the DomainModel: in the `DomainModel/Services/Products` path there is the `IGetPopularProducts` interface. It is based on the domain class `Product` available in `DomainModel/Classes/Products`. Beside the interface, there is also a fake implementation of the service, useful to work without actually having a DB up and running (i.e. to test the GUI routines). When this implementation works, returned products have names starting with "DB...".
 
+The actual (though nevertheless emulated) implementation of the service is in the file `PersistenceLayer/Products/GetPopularProducts_Db.cs`. When this implementation works, returned products have names starting with "Fake...".
 
-Let's now install the DI library. The following references have been added to the project through NuGet:
+So far, whe have the service definition (interface) and two service implementations in two different places. The next step is to create a `ProductsController` which is in charge of showing the list of products through an action. The `IGetPopularProducts` is injected into the controller and the view is coded. We skip the details, which are out of scope now. If you run the project, you get an error saying that `ProductsController` has not a default constructor. This is the moment when the DI controller comes into play.
 
-* `Install-Package SimpleInjector.Integration.Web.Mvc Presentation`
-* `Install-Package SimpleInjector.Packaging Presentation`
-* `Install-Package SimpleInjector.Packaging PersistenceLayer`
-* `Install-Package SimpleInjector.Packaging DomainModel`
+So, let's install the DI library through the following NuGet commands:
 
-The `SimpleInjector.Integration.Web.Mvc` integrates the DI library in the MVC framework, enabling controllers to act as composition roots. The `SimpleInjector.Packaging` library allows to use package abstraction within the solution libraries. It is a very useful abstraction, since you can collect your DI rules within a single file. You can create as many packages as you want, with the aim of placing DI rules **as close as possible to implementations**.
-
+```NuGet
+Install-Package SimpleInjector.Integration.Web.Mvc Presentation
+Install-Package SimpleInjector.Packaging Presentation
+Install-Package SimpleInjector.Packaging PersistenceLayer
+Install-Package SimpleInjector.Packaging DomainModel
 ```
+
+The `SimpleInjector.Integration.Web.Mvc` integrates the DI library in the MVC framework, enabling controllers to act as composition roots. The `SimpleInjector.Packaging` library allows to use *package* abstraction within the solution libraries. It is a very useful abstraction, since you can collect your DI rules within a single file. This is the most important step: thanks to this library you can create as many packages as you want and place there the binding rules, where they have most significance.
+
+Let's configure the container. The `PresentationLayer/App_Start/CompositionRoot.cs` contains the following code.
+
+```C#
 	// Create the container as usual.
     var container = new Container();
     container.Options.DefaultScopedLifestyle = new WebRequestLifestyle();
@@ -50,3 +60,21 @@ The `SimpleInjector.Integration.Web.Mvc` integrates the DI library in the MVC fr
 
     DependencyResolver.SetResolver(new SimpleInjectorDependencyResolver(container));
 ```
+
+As you can see, it contains no binding rules, nor it explicitly refers to some binging routine (e.g. `SomeClass.ConfigureBindings()`). The magic is in the following two lines.
+
+```C#
+// Scan all the referenced assemblies for packages containing DI wiring rules
+var assemblies = BuildManager.GetReferencedAssemblies().Cast<Assembly>();
+container.RegisterPackages(assemblies);
+```
+
+This lines scan all the assemblies referenced by the PersistenceLayer project, searching for binding modules, i.e. the classes inherited by ``IPackage``. Their ``RegisterServices()`` overridden method contains the binding rules. Thanks to packages we can distribute DI logic throughout the application, with the aim of placing DI rules **as close as possible to implementations**. In our example, the file `DomainModel/Bindings.cs` refers to the fake implementation of the service. Instead, the file `PersistenceLayer/Bindings.cs` refers to the *actual* implementation. Both files are close to implementations. So the implementations can even be declared as private.
+
+The described approach has these pro and cons.
+
+...work in progress
+
+* Pro
+
+* Cons
