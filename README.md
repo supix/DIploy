@@ -21,15 +21,15 @@ The *domain model* contains classes and services related to the business process
 
 The *persistence layer* contains non-trivial queries to the DB, exposed as a service to other modules (e.g. a query returning the sorted paginated list of products). It depends on the database and on the domain model (e.g. in order to retrieve domain instances from the database).
 
-The *presentation layer* interfaces the application with the user, according to the chosen presentation technology (e.g. web interface, REST service, windows forms, ecc.). It depends on the presentation layer and consumes its services. It directly depends on the db as well: unless the application is very trivial, it is not always rewarding to rigidly shield the database through a layer exposing all the database functionalities.
+The *presentation layer* interfaces the application with the user, according to the chosen presentation technology (e.g. web interface, REST service, windows forms, ecc.). It depends on the persistence layer and consumes its services. It directly depends on the db as well: unless the application is very trivial, it is not always rewarding to rigidly shield the database through a layer exposing all the database functionalities.
 
 The source code reproduces this simple modules organizations. You can see the MVC5 presentation layer. Domain model and persistence layers have been added to the Visual Studio solution as two class-libraries. References among projects have been added, so as described by the picture above.
 
-The *most popular products list* is a domain concept. For example, the application might take top-sold products in the last month mixing them with the products most visited by the logged user, possibly removing the out-of-stock products. The place to put such a domain concept cannot be other than the DomainModel: in the `DomainModel/Services/Products` path there is the `IGetPopularProducts` interface. It is based on the domain class `Product` available in `DomainModel/Classes/Products`. Beside the interface, there is also a fake implementation of the service, useful to work without actually having a DB up and running (i.e. to test the GUI routines). When this implementation works, returned products have names starting with "DB...".
+The *most popular products list* is a domain concept. For example, the application might take top-sold products in the last month mixing them with the products most visited by the logged user, possibly removing the out-of-stock products. The place to put such a domain concept cannot be other than the DomainModel: in the `DomainModel/Services/Products` path there is the `IGetPopularProducts` interface. It is based on the domain class `Product` available in `DomainModel/Classes/Products`. Beside the interface, there is also a fake implementation of the service, useful to work without actually having a DB up and running (i.e. to test the GUI routines). When this implementation works, returned products have names starting with "Fake...".
 
-The actual (though nevertheless emulated) implementation of the service is in the file `PersistenceLayer/Products/GetPopularProducts_Db.cs`. When this implementation works, returned products have names starting with "Fake...".
+The actual (though nevertheless emulated) implementation of the service is in the file `PersistenceLayer/Products/GetPopularProducts_Db.cs`. When this implementation works, returned products have names starting with "DB...".
 
-So far, we have the service definition (interface) and two service implementations in two different places. The next step is to create a `ProductsController` which is in charge of showing the list of products through an action. The `IGetPopularProducts` is injected into the controller and the view is coded. We skip the details, which are out of scope now. If you run the project, you get an error saying that `ProductsController` has not a default constructor. This is the moment when the DI controller comes into play.
+So far, we have the service definition (interface) and two service implementations in two different places. The next step is to create a `ProductsController` which is in charge of showing the list of products through an action. The `IGetPopularProducts` is injected into the controller (through constructor injection) and the view is coded. We skip the details, which are out of scope now. If you run the project, you get an error saying that `ProductsController` has not a default constructor. This is the moment when Dependency Injection comes into play.
 
 So, let's install the DI library through the following NuGet commands:
 
@@ -40,9 +40,9 @@ Install-Package SimpleInjector.Packaging PersistenceLayer
 Install-Package SimpleInjector.Packaging DomainModel
 ```
 
-The `SimpleInjector.Integration.Web.Mvc` integrates the DI library in the MVC framework, enabling controllers to act as composition roots. The `SimpleInjector.Packaging` library allows to use *package* abstraction within the solution libraries. It is a very useful abstraction, since you can collect your DI rules within a single file. This is the most important step: thanks to this library you can create as many packages as you want and place there the binding rules, where they have most significance.
+The `SimpleInjector.Integration.Web.Mvc` integrates the DI library in the MVC framework, enabling controllers to act as composition roots. The `SimpleInjector.Packaging` library allows to use *package* abstraction within the solution libraries. It is a very useful abstraction, since you can collect your DI rules within a single file. This is the most important step: thanks to this library you can create as many packages as you want and place there the binding rules, there where they have most significance.
 
-Let's configure the container. The `PresentationLayer/App_Start/CompositionRoot.cs` contains the following code.
+Let's configure the container. The `PresentationLayer/App_Start/CompositionRoot.cs` contains the following code (mostly available [on SimpleInjector documentation](http://simpleinjector.readthedocs.io/en/latest/mvcintegration.html)).
 
 ```C#
 	// Create the container as usual.
@@ -76,11 +76,11 @@ This lines scan all the assemblies referenced by the PersistenceLayer project, s
 The described approach has these pro and cons.
 
 * Pro
- * Service implementations are declared as `private`, strongly enforcing the `program towards an interface` approach.
+ * Service implementations are declared as `private`, strongly enforcing the *program towards an interface* approach.
  * Centralized binding files, which include huge lists of namespaces (all those containing at least an implementation), are avoided. Decentralized binding files are small, more readable, and close to the domain they deal with.
 
 * Cons
- * In order to scan all the bindind files, the composition root must statically reference all the assemblies containing at least a binding file, even if it does not explicitely use any resource within them.
+ * In order to scan all the binding files, the composition root must statically reference all the assemblies containing at least one binding file, even if it does not explicitely use any resource within them.
  * When writing local binding files, one might not have enough information to identify the correct lifestyle to enforce. Indeed, often lifestyle depends on overall application aspects. For instance, deciding whether a lifestyle should be thread-scoped or per web-request, might depend on the technology used by the GUI (WinForm vs Web Application vs Windows Service). Such information might not be available when editing a class-library-local binding file.
  
 The source code can be downloaded, compiled and executed. Don't forget to make the `Presentation` project the default startup one. You should see the products fetched by the (faked) database, whose name start with 'DB...'. If you comment the binding rule within `PersistenceLayer/Bindings.cs` and uncomment that within `DomainModel/Bindings.cs`, on execution you will see a list of products generated by the fake class, whose name start with 'Fake...'.
