@@ -76,7 +76,7 @@ This lines scan all the assemblies referenced by the PersistenceLayer project, s
 The described approach has these pro and cons.
 
 * Pro
- * Service implementations are declared as `private`, strongly enforcing the *program towards an interface* approach.
+ * Service implementations are declared as `private`, thus strongly enforcing the *program towards an interface* approach.
  * Centralized binding files, which include huge lists of namespaces (all those containing at least an implementation), are avoided. Decentralized binding files are small, more readable, and close to the domain they deal with.
 
 * Cons
