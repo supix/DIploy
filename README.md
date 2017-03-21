@@ -75,12 +75,12 @@ This lines scan all the assemblies referenced by the PersistenceLayer project, s
 
 The described approach has these pros and cons.
 
-.h5 Pros
+### Pros
 
  * Service implementations are declared as `private`, thus strongly enforcing the *program towards an interface* approach.
  * Centralized binding files, which include huge lists of namespaces (all those containing at least an implementation), are avoided. Decentralized binding files are small, more readable, and close to the domain they deal with.
 
-.h5 Cons
+### Cons
 
  * In order to scan all the binding files, the composition root must statically reference all the assemblies containing at least one binding file, even if it does not explicitely use any resource within them.
  * When writing local binding files, one might not have enough information to identify the correct lifestyle to enforce. Indeed, often lifestyle depends on overall application aspects. For instance, deciding whether a lifestyle should be thread-scoped or per web-request, might depend on the technology used by the GUI (WinForm vs Web Application vs Windows Service). Such information might not be available when editing a class-library-local binding file.
