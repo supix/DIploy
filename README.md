@@ -73,13 +73,15 @@ container.RegisterPackages(assemblies);
 
 This lines scan all the assemblies referenced by the PersistenceLayer project, searching for binding modules, i.e. the classes inherited by ``IPackage``. During the scanning, the overridden ``RegisterServices()`` methods, containing the DI binding rules, are executed. Thanks to packages we can distribute DI logic throughout the application. The main objective is placing DI rules **as close as possible to implementations**. In our example, the file `DomainModel/Bindings.cs` refers to the fake implementation of the service. Instead, the file `PersistenceLayer/Bindings.cs` refers to the *actual* implementation. Both files are close to implementations. So the implementations can even be declared with the `private` access modifier.
 
-The described approach has these pro and cons.
+The described approach has these pros and cons.
 
-* Pro
+h5. Pros
+
  * Service implementations are declared as `private`, thus strongly enforcing the *program towards an interface* approach.
  * Centralized binding files, which include huge lists of namespaces (all those containing at least an implementation), are avoided. Decentralized binding files are small, more readable, and close to the domain they deal with.
 
-* Cons
+h5. Cons
+
  * In order to scan all the binding files, the composition root must statically reference all the assemblies containing at least one binding file, even if it does not explicitely use any resource within them.
  * When writing local binding files, one might not have enough information to identify the correct lifestyle to enforce. Indeed, often lifestyle depends on overall application aspects. For instance, deciding whether a lifestyle should be thread-scoped or per web-request, might depend on the technology used by the GUI (WinForm vs Web Application vs Windows Service). Such information might not be available when editing a class-library-local binding file.
  
