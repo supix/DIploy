@@ -1,3 +1,11 @@
+# Update - 2019-04-28
+
+Since I wrote this article, I rethought the arguments and I found that a more correct approach can be used. The composition root can be hosted in a dedicated project, often called `CompositionRoot`, the only one to reference the container and where all the DI rules are contained. This approach has the further advantage that the order of the binding rules is totally under the control of the programmer.
+
+I will update this article as soon as possible. Anyway, I started to write a new project which follows this new approach and is organized with an educational purpose, where each commit explains the motivation behind the choices. You can find it [here](https://github.com/supix/RockApi).
+
+-----------------------------
+
 # Where should dependency-injection binding rules be placed?
 
 Dependency Injection (DI) is one of the most valuable architectural patterns in software development. It encourages clean design, programming towards interfaces (as opposite to implementations), promotes unit testing, greatly improves extensibility. Benefits of adopting DI *way of life* are clearly described in [this article](http://kozmic.net/2012/10/23/ioc-container-solves-a-problem-you-might-not-have-but-its-a-nice-problem-to-have/).
